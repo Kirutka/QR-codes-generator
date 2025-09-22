@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генератор QR-кодов</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Создать QR-код</h1>
+        <form id="qrForm" action="/generate" method="post">
+            <div class="input-group">
+                <input type="text" id="dataInput" name="data" placeholder="Введите текст или URL" required>
+                <button type="submit">Генерировать</button>
+            </div>
+            {{if .Error}}
+                <p class="error">{{.Error}}</p>
+            {{end}}
+        </form>
+        <div id="resultContainer">
+            <!-- Здесь будет отображаться QR-код -->
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('qrForm').addEventListener('submit', function(e) {
+            e.preventDefault(); // Предотвращаем стандартную отправку формы
+
+            const formData = new FormData(this);
+            const dataValue = formData.get('data');
+
+            if (!dataValue.trim()) {
+                document.querySelector('.error').textContent = 'Пожалуйста, введите текст или URL.';
+                return;
+            }
+
+            // Отправляем POST-запрос с помощью Fetch API
+            fetch('/generate', {
+                method: 'POST',
+                body: new URLSearchParams(formData) // Отправляем данные как application/x-www-form-urlencoded
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob(); // Получаем ответ как Blob (двоичные данные изображения)
+                } else {
+                    // Если сервер вернул ошибку, попробуем получить сообщение
+                    return response.text().then(text => { throw new Error(text || 'Ошибка сервера'); });
+                }
+            })
+            .then(blob => {
+                const imageUrl = URL.createObjectURL(blob);
+                const resultContainer = document.getElementById('resultContainer');
+                resultContainer.innerHTML = `<h2>Ваш QR-код:</h2><img src="${imageUrl}" alt="QR-код для ${dataValue}">`;
+                document.querySelector('.error').textContent = ''; // Очищаем ошибки
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                document.querySelector('.error').textContent = 'Произошла ошибка при генерации QR-кода: ' + error.message;
+                document.getElementById('resultContainer').innerHTML = ''; // Очищаем контейнер результата
+            });
+        });
+    </script>
+</body>
+</html>
